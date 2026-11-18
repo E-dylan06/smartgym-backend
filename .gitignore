@@ -1,0 +1,7 @@
+node_modules/
+.env
+create-bloqueos-table.js
+create-metricas-table.js
+create-trainer-tables.js
+schema_info.json
+test-api.js
