@@ -12,6 +12,28 @@ export class ReservasRepository {
     return rows.length > 0;
   }
 
+  async findByUserAndHorario(userId, idHorario, connection) {
+    const conn = connection || pool;
+    const [rows] = await conn.query(
+      `SELECT id_reserva, estado, activo FROM reservas
+       WHERE id_usuario = ? AND id_horario = ?`,
+      [userId, idHorario]
+    );
+    if (rows.length === 0) return null;
+    return rows[0];
+  }
+
+  async reactivarReserva(idReserva, montoAbonado = 0.0, connection) {
+    const conn = connection || pool;
+    await conn.query(
+      `UPDATE reservas
+       SET estado = 'confirmada', fecha_reserva = NOW(2), monto_abonado = ?, activo = 1
+       WHERE id_reserva = ?`,
+      [montoAbonado, idReserva]
+    );
+    return idReserva;
+  }
+
   async findCruces(userId, fecha, horaInicio, horaFin, connection) {
     const conn = connection || pool;
     const [rows] = await conn.query(
@@ -63,6 +85,7 @@ export class ReservasRepository {
               h.id_horario, h.fecha, h.hora_inicio, h.hora_fin,
               c.id_clase, c.nombre AS clase_nombre, c.descripcion AS clase_descripcion,
               c.duracion_minutos,
+              e.id_entrenador,
               u_ent.nombre AS entrenador_nombre, u_ent.foto_url AS entrenador_foto,
               esp.nombre AS entrenador_especialidad,
               a.id_asistencia, a.asistio, a.fecha_marcado AS asistencia_fecha,

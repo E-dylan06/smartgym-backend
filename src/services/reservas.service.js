@@ -59,12 +59,19 @@ export class ReservasService {
         }
       }
 
-      // 3. Validar duplicidad
-      const duplicada = await this.reservasRepo.findDuplicada(user.id_usuario, id_horario, connection);
-      if (duplicada) {
-        const error = new Error('Ya tienes una reserva confirmada para este horario');
-        error.statusCode = 400;
-        throw error;
+      // 3. Validar duplicidad o reingreso tras cancelación previa
+      const reservaPrevia = await this.reservasRepo.findByUserAndHorario(user.id_usuario, id_horario, connection);
+      if (reservaPrevia) {
+        if (reservaPrevia.estado === 'confirmada') {
+          const error = new Error('Ya tienes una reserva confirmada para este horario');
+          error.statusCode = 400;
+          throw error;
+        }
+        if (reservaPrevia.estado === 'finalizada') {
+          const error = new Error('Esta clase ya ha concluido y tu asistencia fue registrada');
+          error.statusCode = 400;
+          throw error;
+        }
       }
 
       // 4. Validar cruce de horario en misma fecha (RF05)
@@ -132,22 +139,28 @@ export class ReservasService {
         }
       }
 
-      // 5. Insertar reserva
-      const newReservaId = await this.reservasRepo.create(
-        {
-          id_usuario: user.id_usuario,
-          id_horario,
-          monto_abonado: 0.0,
-        },
-        connection
-      );
+      // 5. Insertar nueva reserva o reactivar reserva previamente cancelada
+      let newReservaId;
+      if (reservaPrevia && reservaPrevia.estado === 'cancelada') {
+        newReservaId = reservaPrevia.id_reserva;
+        await this.reservasRepo.reactivarReserva(newReservaId, 0.0, connection);
+      } else {
+        newReservaId = await this.reservasRepo.create(
+          {
+            id_usuario: user.id_usuario,
+            id_horario,
+            monto_abonado: 0.0,
+          },
+          connection
+        );
+      }
 
       // 6. Actualizar cupos en horario
       const nuevosCupos = horario.cupos_disponibles - 1;
       const nuevoEstado = nuevosCupos === 0 ? 'lleno' : 'disponible';
       await this.horariosRepo.updateCupos(id_horario, nuevosCupos, nuevoEstado, connection);
 
-      // 7. Insertar asistencia inicial
+      // 7. Insertar o resetear asistencia inicial
       await this.asistenciasRepo.createInitial(newReservaId, connection);
 
       await connection.commit();

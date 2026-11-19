@@ -21,6 +21,7 @@ export class ReservaEntity {
     this.clase_nombre = data.clase_nombre;
     this.clase_descripcion = data.clase_descripcion;
     this.duracion_minutos = data.duracion_minutos;
+    this.id_entrenador = data.id_entrenador;
     this.entrenador_nombre = data.entrenador_nombre;
     this.entrenador_foto = data.entrenador_foto;
     this.entrenador_especialidad = data.entrenador_especialidad;

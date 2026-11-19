@@ -3,7 +3,8 @@ import { entrenadoresService } from '../services/entrenadores.service.js';
 export const getMisClases = async (req, res, next) => {
   try {
     const userId = req.user.id_usuario;
-    const clases = await entrenadoresService.getMisClases(userId);
+    const { fecha } = req.query;
+    const clases = await entrenadoresService.getMisClases(userId, { fecha });
 
     res.json({
       ok: true,

@@ -7,8 +7,8 @@ export class EntrenadoresService {
     this.repository = repository;
   }
 
-  async getMisClases(userId) {
-    return this.repository.getMisClases(userId);
+  async getMisClases(userId, filtros = {}) {
+    return this.repository.getMisClases(userId, filtros);
   }
 
   async getAlumnosDeClase(idHorario, userId) {

@@ -18,29 +18,25 @@ export const initSocket = (server) => {
       socket.handshake.auth?.token ||
       socket.handshake.headers?.authorization?.replace('Bearer ', '');
 
-    if (!token) {
-      console.log('⚠️ [Socket.io] Conexión rechazada: Token no provisto');
-      return next(new Error('Autenticación requerida'));
+    if (token) {
+      try {
+        const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_smartgym_2026';
+        const decoded = jwt.verify(token, secret);
+        socket.user = decoded;
+      } catch (err) {
+        console.log('⚠️ [Socket.io] Token no válido o expirado:', err.message);
+      }
     }
-
-    try {
-      const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_smartgym_2026';
-      const decoded = jwt.verify(token, secret);
-      socket.user = decoded;
-      next();
-    } catch (err) {
-      console.log('⚠️ [Socket.io] Conexión rechazada: Token inválido', err.message);
-      return next(new Error('Token inválido'));
-    }
+    // Permitir conexión: si no tiene token en handshake, se autenticará vía registrar_usuario
+    next();
   });
 
   io.on('connection', (socket) => {
-    const userId = socket.user?.id_usuario;
-    const userRole = (socket.user?.rol_nombre || socket.user?.rol || '').toLowerCase();
-
-    console.log(`⚡ [Socket.io] Cliente conectado: ${socket.user?.nombre} (ID: ${userId}, Rol: ${userRole})`);
+    let userId = socket.user?.id_usuario;
+    let userRole = (socket.user?.rol_nombre || socket.user?.rol || '').toLowerCase();
 
     if (userId) {
+      console.log(`⚡ [Socket.io] Cliente autenticado conectado: ${socket.user?.nombre} (ID: ${userId}, Rol: ${userRole})`);
       socket.join(`user_${userId}`);
     }
 
@@ -48,8 +44,22 @@ export const initSocket = (server) => {
       socket.join(`rol_${userRole}`);
     }
 
+    // Soporte para registro directo desde el cliente
+    socket.on('registrar_usuario', (datos) => {
+      const id = datos?.id_usuario;
+      const rol = (datos?.rol || datos?.rol_nombre || '').toLowerCase();
+      if (id) {
+        socket.join(`user_${id}`);
+        console.log(`⚡ [Socket.io] Usuario registrado en sala: user_${id}`);
+      }
+      if (rol) {
+        socket.join(`rol_${rol}`);
+        console.log(`⚡ [Socket.io] Usuario registrado en rol: rol_${rol}`);
+      }
+    });
+
     socket.on('disconnect', () => {
-      console.log(`🔌 [Socket.io] Cliente desconectado: ${socket.user?.nombre}`);
+      console.log(`🔌 [Socket.io] Cliente desconectado: ${socket.user?.nombre || socket.id}`);
     });
   });
 

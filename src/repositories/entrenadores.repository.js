@@ -4,21 +4,29 @@ export class EntrenadoresRepository {
   /**
    * Obtiene las clases programadas para el entrenador autenticado
    */
-  async getMisClases(idUsuario) {
-    const [rows] = await pool.query(
-      `SELECT h.id_horario, h.fecha, h.hora_inicio, h.hora_fin,
-              h.capacidad_maxima, h.cupos_disponibles, h.estado,
-              c.id_clase, c.nombre AS clase_nombre, c.duracion_minutos,
-              t.nombre AS turno,
-              (h.capacidad_maxima - h.cupos_disponibles) AS total_alumnos_inscritos
-       FROM horarios h
-       INNER JOIN clases c ON h.id_clase = c.id_clase
-       INNER JOIN entrenadores e ON h.id_entrenador = e.id_entrenador
-       LEFT JOIN turnos t ON h.id_turno = t.id_turno
-       WHERE e.id_usuario = ? AND h.activo = 1
-       ORDER BY h.fecha ASC, h.hora_inicio ASC`,
-      [idUsuario]
-    );
+  async getMisClases(idUsuario, { fecha } = {}) {
+    let query = `
+      SELECT h.id_horario, h.fecha, h.hora_inicio, h.hora_fin,
+             h.capacidad_maxima, h.cupos_disponibles, h.estado,
+             c.id_clase, c.nombre AS clase_nombre, c.duracion_minutos,
+             t.nombre AS turno,
+             (h.capacidad_maxima - h.cupos_disponibles) AS total_alumnos_inscritos
+      FROM horarios h
+      INNER JOIN clases c ON h.id_clase = c.id_clase
+      INNER JOIN entrenadores e ON h.id_entrenador = e.id_entrenador
+      LEFT JOIN turnos t ON h.id_turno = t.id_turno
+      WHERE e.id_usuario = ? AND h.activo = 1
+    `;
+    const params = [idUsuario];
+
+    if (fecha) {
+      query += ' AND h.fecha = ?';
+      params.push(fecha);
+    }
+
+    query += ' ORDER BY h.fecha ASC, h.hora_inicio ASC';
+
+    const [rows] = await pool.query(query, params);
     return rows;
   }
 

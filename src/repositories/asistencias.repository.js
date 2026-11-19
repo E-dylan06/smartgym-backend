@@ -15,7 +15,8 @@ export class AsistenciasRepository {
     const conn = connection || pool;
     await conn.query(
       `INSERT INTO asistencias (id_reserva, asistio, fecha_marcado, activo)
-       VALUES (?, 'no', NULL, 1)`,
+       VALUES (?, 'no', NULL, 1)
+       ON DUPLICATE KEY UPDATE asistio = 'no', fecha_marcado = NULL, activo = 1`,
       [idReserva]
     );
   }

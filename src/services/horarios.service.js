@@ -33,7 +33,8 @@ export class HorariosService {
     // 1. Permisos y asignación de entrenador
     if (user.rol === 'entrenador') {
       const entrenador = await entrenadoresRepository.findByUserId(user.id_usuario);
-      if (!entrenador || !entrenador.activo) {
+      const isActivo = entrenador && (Buffer.isBuffer(entrenador.activo) ? entrenador.activo[0] === 1 : Boolean(entrenador.activo));
+      if (!entrenador || !isActivo) {
         const error = new Error('No tienes un perfil de entrenador activo para programar clases');
         error.statusCode = 403;
         throw error;
